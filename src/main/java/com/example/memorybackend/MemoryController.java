@@ -6,7 +6,10 @@ import java.util.*;
 @CrossOrigin(origins = "*")
 @RestController
 public class MemoryController {
-
+@GetMapping("/")
+public String home() {
+    return "Memory Backend Running Successfully!";
+}
     @PostMapping("/firstfit")
     public Map<String, Object> firstFit(@RequestBody Map<String, List<Integer>> input) {
         return allocate(input, "first");
