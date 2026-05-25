@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Memory Management Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #0d0f1a;
+    --bg2: #13162a;
+    --bg3: #1a1e35;
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(255,255,255,0.15);
+    --text: #e8eaf6;
+    --text-muted: #6b7280;
+    --accent-blue: #4f8ef7;
+    --accent-blue-glow: rgba(79,142,247,0.15);
+    --accent-green: #34d399;
+    --accent-purple: #a78bfa;
+    --accent-orange: #fb923c;
+    --accent-pink: #f472b6;
+    --hit: #34d399;
+    --fault: #f87171;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --font-size-base: 14px;
+}
+body.light {
+    --bg: #f0f2fa; --bg2: #ffffff; --bg3: #e8ecf8;
+    --border: rgba(0,0,0,0.08); --border-hover: rgba(0,0,0,0.18);
+    --text: #111827; --text-muted: #6b7280;
+    --accent-blue-glow: rgba(79,142,247,0.1);
+}
+body.colorblind { --hit: #3b82f6; --fault: #f97316; --accent-green: #3b82f6; }
+body.font-sm { --font-size-base: 12px; }
+body.font-lg { --font-size-base: 16px; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; font-size: var(--font-size-base); background: var(--bg); color: var(--text); display: flex; min-height: 100vh; transition: background 0.3s, color 0.3s; }
+
+/* SIDEBAR */
+.sidebar { width: 240px; background: var(--bg2); border-right: 1px solid var(--border); padding: 28px 16px; display: flex; flex-direction: column; gap: 4px; transition: width 0.3s; overflow: hidden; position: sticky; top: 0; height: 100vh; }
+.sidebar.closed { width: 72px; }
+.sidebar.closed .menu-text, .sidebar.closed .logo-text { display: none; }
+.sidebar.closed .logo-row, .sidebar.closed .menu-item { justify-content: center; }
+.logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; padding: 0 6px; }
+.logo-icon { width: 36px; height: 36px; background: var(--accent-blue); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.logo-text { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.3px; line-height: 1.3; }
+.logo-text span { display: block; font-size: 11px; font-weight: 400; color: var(--text-muted); font-family: 'Space Mono', monospace; }
+.menu-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--radius-sm); cursor: pointer; color: var(--text-muted); font-size: 14px; font-weight: 500; transition: all 0.2s; border: 1px solid transparent; }
+.menu-item:hover { background: var(--bg3); color: var(--text); border-color: var(--border); }
+.menu-item.active { background: var(--accent-blue-glow); color: var(--accent-blue); border-color: rgba(79,142,247,0.2); }
+.menu-item .icon-wrap { font-size: 17px; flex-shrink: 0; }
+
+/* PANELS */
+.panel { display: none; flex: 1; padding: 32px 40px; overflow-y: auto; }
+.panel.active { display: block; }
+
+/* HEADER */
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+.header-left { display: flex; align-items: center; gap: 16px; }
+.menu-btn { width: 38px; height: 38px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: all 0.2s; }
+.menu-btn:hover { border-color: var(--border-hover); background: var(--bg3); }
+.page-title { font-size: 22px; font-weight: 600; letter-spacing: -0.4px; }
+.page-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.header-right { display: flex; gap: 10px; align-items: center; }
+.theme-btn { padding: 8px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
+.theme-btn:hover { border-color: var(--border-hover); background: var(--bg3); }
+
+/* CARDS */
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 16px; transition: background 0.3s, border 0.3s; }
+.card-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 16px; }
+.card-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.card-title-row .card-title { margin-bottom: 0; }
+
+.input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.input-wrap { position: relative; }
+.input-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
+input[type=text], input:not([type]) { width: 100%; padding: 11px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: 'Space Mono', monospace; transition: border 0.2s, background 0.2s; outline: none; }
+input[type=text]:focus, input:not([type]):focus { border-color: var(--accent-blue); background: var(--bg); }
+input::placeholder { color: var(--text-muted); font-family: 'Space Mono', monospace; }
+
+/* ALGO GRID */
+.algo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+.algo-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 14px; text-align: center; cursor: pointer; transition: all 0.25s; position: relative; overflow: hidden; }
+.algo-card::before { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.25s; border-radius: var(--radius); }
+.algo-card:hover { transform: translateY(-3px); border-color: var(--border-hover); }
+.algo-card:hover::before { opacity: 1; }
+.algo-card.blue::before { background: rgba(79,142,247,0.06); }
+.algo-card.green::before { background: rgba(52,211,153,0.06); }
+.algo-card.purple::before { background: rgba(167,139,250,0.06); }
+.algo-card.orange::before { background: rgba(251,146,60,0.06); }
+.algo-card.pink::before { background: rgba(244,114,182,0.06); }
+.algo-card:hover.blue { border-color: rgba(79,142,247,0.3); }
+.algo-card:hover.green { border-color: rgba(52,211,153,0.3); }
+.algo-card:hover.purple { border-color: rgba(167,139,250,0.3); }
+.algo-card:hover.orange { border-color: rgba(251,146,60,0.3); }
+.algo-card:hover.pink { border-color: rgba(244,114,182,0.3); }
+.algo-icon { width: 52px; height: 52px; margin: 0 auto 12px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; transition: transform 0.2s; }
+.algo-card:hover .algo-icon { transform: scale(1.1); }
+.blue .algo-icon { background: rgba(79,142,247,0.15); }
+.green .algo-icon { background: rgba(52,211,153,0.15); }
+.purple .algo-icon { background: rgba(167,139,250,0.15); }
+.orange .algo-icon { background: rgba(251,146,60,0.15); }
+.pink .algo-icon { background: rgba(244,114,182,0.15); }
+.algo-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.algo-tag { font-size: 10px; font-family: 'Space Mono', monospace; color: var(--text-muted); }
+.blue .algo-tag { color: var(--accent-blue); }
+.green .algo-tag { color: var(--accent-green); }
+.purple .algo-tag { color: var(--accent-purple); }
+.orange .algo-tag { color: var(--accent-orange); }
+.pink .algo-tag { color: var(--accent-pink); }
+
+/* TABLE */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); background: var(--bg3); border-bottom: 1px solid var(--border); }
+th:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+th:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 12px; }
+tr:last-child td { border-bottom: none; }
+.badge-alloc { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-family: 'Space Mono', monospace; }
+.badge-ok { background: rgba(52,211,153,0.12); color: var(--accent-green); }
+.badge-fail { background: rgba(248,113,113,0.12); color: var(--fault); }
+
+/* FRAMES */
+.frames-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.frame-box { width: 54px; height: 54px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: 'Space Mono', monospace; font-size: 15px; background: var(--bg3); border: 1px solid var(--border); color: var(--text-muted); animation: pop 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes pop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.frame-box.hit { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.3); color: var(--hit); }
+.frame-box.fault { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.3); color: var(--fault); }
+body.colorblind .frame-box.hit { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.3); }
+body.colorblind .frame-box.fault { background: rgba(249,115,22,0.12); border-color: rgba(249,115,22,0.3); }
+
+.stats-row { display: flex; gap: 16px; margin-top: 20px; flex-wrap: wrap; }
+.stat-chip { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; }
+.stat-chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-fault { background: var(--fault); }
+.dot-hit { background: var(--hit); }
+.stat-val { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--text); }
+.stat-label { color: var(--text-muted); }
+.legend { display: flex; gap: 16px; margin-bottom: 12px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+.section-divider { height: 1px; background: var(--border); margin: 8px 0 16px; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+.empty-text { font-size: 13px; }
+
+/* STEP MODE */
+.step-bar { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.step-btn { padding: 8px 20px; background: var(--accent-blue); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: opacity 0.2s; }
+.step-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.step-info { font-size: 12px; color: var(--text-muted); font-family: 'Space Mono', monospace; }
+
+/* SETTINGS PAGE */
+.settings-section { margin-bottom: 28px; }
+.settings-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.setting-row:last-child { border-bottom: none; }
+.setting-info { max-width: 60%; }
+.setting-name { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.setting-desc { font-size: 12px; color: var(--text-muted); }
+.setting-control { display: flex; align-items: center; gap: 10px; }
+
+/* TOGGLE */
+.toggle { position: relative; width: 44px; height: 24px; cursor: pointer; }
+.toggle input { display: none; }
+.toggle-track { position: absolute; inset: 0; background: var(--bg3); border: 1px solid var(--border); border-radius: 999px; transition: background 0.2s; }
+.toggle input:checked + .toggle-track { background: var(--accent-blue); border-color: var(--accent-blue); }
+.toggle-thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+.toggle input:checked ~ .toggle-thumb { transform: translateX(20px); }
+
+/* SEGMENTED */
+.seg { display: flex; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.seg-opt { padding: 7px 14px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted); transition: all 0.15s; white-space: nowrap; }
+.seg-opt.active { background: var(--accent-blue); color: #fff; }
+.seg-opt:hover:not(.active) { background: var(--bg2); color: var(--text); }
+
+/* PRESETS */
+.preset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.preset-item { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; cursor: pointer; transition: all 0.2s; position: relative; }
+.preset-item:hover { border-color: var(--border-hover); background: var(--bg2); }
+.preset-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.preset-detail { font-size: 11px; color: var(--text-muted); font-family: 'Space Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preset-del { position: absolute; top: 8px; right: 10px; font-size: 14px; color: var(--text-muted); cursor: pointer; display: none; }
+.preset-item:hover .preset-del { display: block; }
+.preset-add { border: 1px dashed var(--border); background: transparent; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; color: var(--text-muted); }
+.preset-add:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+/* HISTORY */
+.history-list { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
+.history-item { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; display: flex; align-items: center; gap: 14px; }
+.history-algo { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; font-family: 'Space Mono', monospace; flex-shrink: 0; }
+.h-blue { background: rgba(79,142,247,0.15); color: var(--accent-blue); }
+.h-green { background: rgba(52,211,153,0.15); color: var(--accent-green); }
+.h-purple { background: rgba(167,139,250,0.15); color: var(--accent-purple); }
+.h-orange { background: rgba(251,146,60,0.15); color: var(--accent-orange); }
+.h-pink { background: rgba(244,114,182,0.15); color: var(--accent-pink); }
+.history-detail { flex: 1; font-size: 12px; color: var(--text-muted); font-family: 'Space Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-time { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.history-result { font-size: 12px; font-weight: 600; flex-shrink: 0; }
+
+/* COMPARE */
+.compare-table-wrap { overflow-x: auto; }
+.compare-table th { white-space: nowrap; }
+.compare-table td { white-space: nowrap; }
+.compare-best { background: rgba(52,211,153,0.08) !important; }
+
+/* ACTION BTNS */
+.action-btn { padding: 8px 16px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
+.action-btn:hover { border-color: var(--border-hover); background: var(--bg2); }
+.action-btn.danger { color: var(--fault); border-color: rgba(248,113,113,0.2); }
+.action-btn.danger:hover { background: rgba(248,113,113,0.06); }
+.action-btn.primary { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+.action-btn.primary:hover { opacity: 0.88; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; width: 420px; max-width: 95vw; }
+.modal-title { font-size: 16px; font-weight: 600; margin-bottom: 20px; }
+.modal-field { margin-bottom: 14px; }
+.modal-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+    <div class="logo-row">
+        <div class="logo-icon">💾</div>
+        <div class="logo-text">MemSim<span>v2.0 · OS Tools</span></div>
+    </div>
+    <div class="menu-item active" onclick="showPanel('simulator', this)">
+        <span class="icon-wrap">📊</span><span class="menu-text">Simulator</span>
+    </div>
+    <div class="menu-item" onclick="showPanel('settings', this)">
+        <span class="icon-wrap">⚙️</span><span class="menu-text">Settings</span>
+    </div>
+    <div class="menu-item" onclick="showPanel('history', this)">
+        <span class="icon-wrap">🕘</span><span class="menu-text">History</span>
+    </div>
+    <div class="menu-item" onclick="showPanel('about', this)">
+        <span class="icon-wrap">ℹ️</span><span class="menu-text">About</span>
+    </div>
+</div>
+
+<!-- ═══════════ SIMULATOR PANEL ═══════════ -->
+<div class="panel active" id="panel-simulator">
+    <div class="header">
+        <div class="header-left">
+            <div class="menu-btn" onclick="toggleSidebar()">☰</div>
+            <div>
+                <div class="page-title">Memory Management Simulator</div>
+                <div class="page-sub">Visualize allocation and page replacement algorithms</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☀️ Light</button>
+        </div>
+    </div>
+
+    <div class="input-grid">
+        <div class="card">
+            <div class="card-title-row">
+                <div class="card-title">Memory Allocation</div>
+                <button class="action-btn" style="font-size:11px;padding:5px 10px;" onclick="openPresetModal('alloc')">📂 Presets</button>
+            </div>
+            <div class="input-row">
+                <div class="input-wrap">
+                    <div class="input-label">Memory Blocks (KB)</div>
+                    <input id="blocks" placeholder="100,500,200,300,600">
+                </div>
+                <div class="input-wrap">
+                    <div class="input-label">Process Sizes (KB)</div>
+                    <input id="processes" placeholder="212,417,112,426">
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title-row">
+                <div class="card-title">Page Replacement</div>
+                <button class="action-btn" style="font-size:11px;padding:5px 10px;" onclick="openPresetModal('page')">📂 Presets</button>
+            </div>
+            <div class="input-row">
+                <div class="input-wrap">
+                    <div class="input-label">Page Reference String</div>
+                    <input id="pages" placeholder="7,0,1,2,0,3,0,4">
+                </div>
+                <div class="input-wrap">
+                    <div class="input-label">Frame Count</div>
+                    <input id="frames" placeholder="e.g. 3">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="algo-grid">
+        <div class="algo-card blue" onclick="firstFit()">
+            <div class="algo-icon">⚙️</div>
+            <div class="algo-name">First Fit</div>
+            <div class="algo-tag">ALLOCATION</div>
+        </div>
+        <div class="algo-card green" onclick="bestFit()">
+            <div class="algo-icon">🎯</div>
+            <div class="algo-name">Best Fit</div>
+            <div class="algo-tag">ALLOCATION</div>
+        </div>
+        <div class="algo-card purple" onclick="worstFit()">
+            <div class="algo-icon">⚡</div>
+            <div class="algo-name">Worst Fit</div>
+            <div class="algo-tag">ALLOCATION</div>
+        </div>
+        <div class="algo-card orange" onclick="fifo()">
+            <div class="algo-icon">🕒</div>
+            <div class="algo-name">FIFO</div>
+            <div class="algo-tag">PAGE REPLACE</div>
+        </div>
+        <div class="algo-card pink" onclick="lru()">
+            <div class="algo-icon">📚</div>
+            <div class="algo-name">LRU</div>
+            <div class="algo-tag">PAGE REPLACE</div>
+        </div>
+    </div>
+
+    <!-- COMPARE ALL -->
+    <div class="card">
+        <div class="card-title-row">
+            <div class="card-title">Algorithm Comparison</div>
+            <div style="display:flex;gap:8px;">
+                <button class="action-btn primary" onclick="compareAll()">▶ Compare All 3</button>
+                <button class="action-btn" onclick="exportCSV()">⬇ Export CSV</button>
+            </div>
+        </div>
+        <div id="compareWrap">
+            <div class="empty-state" style="padding:24px 0;">
+                <div class="empty-icon" style="font-size:28px;">⚖️</div>
+                <div class="empty-text">Click "Compare All 3" to run First Fit, Best Fit and Worst Fit simultaneously</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ALLOCATION OUTPUT -->
+    <div class="card">
+        <div class="card-title-row">
+            <div class="card-title">Allocation Result</div>
+            <button class="action-btn" onclick="exportAllocCSV()" style="font-size:11px;padding:5px 10px;">⬇ Export CSV</button>
+        </div>
+        <table id="outputTable">
+            <thead><tr><th>Process</th><th>Size (KB)</th><th>Assigned Block</th><th>Status</th></tr></thead>
+            <tbody id="outputBody">
+                <tr><td colspan="4"><div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-text">Run an allocation algorithm to see results</div></div></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- PAGE REPLACEMENT -->
+    <div class="card">
+        <div class="card-title">Page Replacement Visualization</div>
+        <div class="legend">
+            <div class="legend-item"><div class="legend-dot" id="legendHit" style="background:rgba(52,211,153,0.5);border:1px solid rgba(52,211,153,0.4);"></div>Page Hit</div>
+            <div class="legend-item"><div class="legend-dot" id="legendFault" style="background:rgba(248,113,113,0.5);border:1px solid rgba(248,113,113,0.4);"></div>Page Fault</div>
+        </div>
+        <div class="section-divider"></div>
+        <div id="framesContainer" class="frames-grid">
+            <div class="empty-state" style="width:100%"><div class="empty-icon">📄</div><div class="empty-text">Run FIFO or LRU to visualize page replacements</div></div>
+        </div>
+        <div class="step-bar" id="stepBar" style="display:none;">
+            <button class="step-btn" id="stepBtn" onclick="doStep()">Next Step ▶</button>
+            <span class="step-info" id="stepInfo">Step 0 / 0</span>
+        </div>
+        <div class="stats-row" id="statsRow" style="display:none">
+            <div class="stat-chip"><div class="dot dot-fault"></div><span class="stat-label">Page Faults</span><span class="stat-val" id="faultCount">0</span></div>
+            <div class="stat-chip"><div class="dot dot-hit"></div><span class="stat-label">Page Hits</span><span class="stat-val" id="hitCount">0</span></div>
+            <div class="stat-chip"><span class="stat-label">Hit Rate</span><span class="stat-val" id="hitRate">0%</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ SETTINGS PANEL ═══════════ -->
+<div class="panel" id="panel-settings">
+    <div class="header">
+        <div class="header-left">
+            <div class="menu-btn" onclick="toggleSidebar()">☰</div>
+            <div><div class="page-title">Settings</div><div class="page-sub">Customize your simulator experience</div></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <!-- ANIMATION -->
+        <div class="settings-section">
+            <div class="settings-section-title">Animation</div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">Animation Speed</div>
+                    <div class="setting-desc">Controls how fast page frames animate during FIFO / LRU</div>
+                </div>
+                <div class="setting-control">
+                    <div class="seg" id="speedSeg">
+                        <div class="seg-opt" onclick="setSpeed('slow',this)">Slow</div>
+                        <div class="seg-opt active" onclick="setSpeed('normal',this)">Normal</div>
+                        <div class="seg-opt" onclick="setSpeed('fast',this)">Fast</div>
+                        <div class="seg-opt" onclick="setSpeed('instant',this)">Instant</div>
+                    </div>
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">Step-by-Step Mode</div>
+                    <div class="setting-desc">Pause after each page reference — advance manually with Next Step</div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle"><input type="checkbox" id="stepToggle" onchange="settings.stepMode=this.checked"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+                </div>
+            </div>
+        </div>
+
+        <!-- DISPLAY -->
+        <div class="settings-section">
+            <div class="settings-section-title">Display</div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">Font Size</div>
+                    <div class="setting-desc">Adjust the base text size throughout the app</div>
+                </div>
+                <div class="setting-control">
+                    <div class="seg" id="fontSeg">
+                        <div class="seg-opt" onclick="setFont('sm',this)">Small</div>
+                        <div class="seg-opt active" onclick="setFont('md',this)">Medium</div>
+                        <div class="seg-opt" onclick="setFont('lg',this)">Large</div>
+                    </div>
+                </div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">Color Blind Mode</div>
+                    <div class="setting-desc">Replaces green/red hit/fault colors with blue/orange</div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle"><input type="checkbox" id="cbToggle" onchange="toggleColorBlind(this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRESETS -->
+        <div class="settings-section">
+            <div class="settings-section-title">Input Presets</div>
+            <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:12px;">
+                <div style="display:flex;gap:10px;width:100%;justify-content:space-between;align-items:center;">
+                    <div class="setting-desc">Save and load input configurations for quick access</div>
+                    <button class="action-btn primary" onclick="openSavePresetModal()">+ Save Current</button>
+                </div>
+                <div class="preset-grid" id="presetGrid"></div>
+            </div>
+        </div>
+
+        <!-- DATA -->
+        <div class="settings-section">
+            <div class="settings-section-title">Data</div>
+            <div class="setting-row">
+                <div class="setting-info">
+                    <div class="setting-name">Clear Run History</div>
+                    <div class="setting-desc">Remove all saved simulation runs from this session</div>
+                </div>
+                <div class="setting-control">
+                    <button class="action-btn danger" onclick="clearHistory()">Clear History</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ HISTORY PANEL ═══════════ -->
+<div class="panel" id="panel-history">
+    <div class="header">
+        <div class="header-left">
+            <div class="menu-btn" onclick="toggleSidebar()">☰</div>
+            <div><div class="page-title">Run History</div><div class="page-sub">All simulation runs from this session</div></div>
+        </div>
+        <div class="header-right">
+            <button class="action-btn danger" onclick="clearHistory()">Clear All</button>
+        </div>
+    </div>
+    <div class="card">
+        <div class="history-list" id="historyList">
+            <div class="empty-state"><div class="empty-icon">🕘</div><div class="empty-text">No runs yet — run a simulation to see history</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ ABOUT PANEL ═══════════ -->
+<div class="panel" id="panel-about">
+    <div class="header">
+        <div class="header-left">
+            <div class="menu-btn" onclick="toggleSidebar()">☰</div>
+            <div><div class="page-title">About</div><div class="page-sub">Memory Management Simulator v2.0</div></div>
+        </div>
+    </div>
+    <div class="card">
+        <p style="font-size:14px;color:var(--text-muted);line-height:1.7;">This simulator demonstrates core OS memory management algorithms — First Fit, Best Fit, Worst Fit for memory allocation, and FIFO &amp; LRU for page replacement. Built for learning and experimentation.</p>
+        <div style="margin-top:20px;display:flex;flex-wrap:wrap;gap:10px;">
+            <div class="stat-chip"><span class="stat-label">Version</span><span class="stat-val" style="margin-left:6px;">2.0</span></div>
+            <div class="stat-chip"><span class="stat-label">Algorithms</span><span class="stat-val" style="margin-left:6px;">5</span></div>
+            <div class="stat-chip"><span class="stat-label">Backend</span><span class="stat-val" style="margin-left:6px;">localhost:8080</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- SAVE PRESET MODAL -->
+<div class="modal-overlay" id="savePresetModal">
+    <div class="modal">
+        <div class="modal-title">💾 Save Current Inputs as Preset</div>
+        <div class="modal-field">
+            <div class="modal-label">Preset Name</div>
+            <input type="text" id="presetNameInput" placeholder="e.g. Test Case 1">
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);font-family:'Space Mono',monospace;background:var(--bg3);padding:10px 14px;border-radius:var(--radius-sm);" id="presetPreview"></div>
+        <div class="modal-actions">
+            <button class="action-btn" onclick="closeModal('savePresetModal')">Cancel</button>
+            <button class="action-btn primary" onclick="savePreset()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- LOAD PRESET MODAL -->
+<div class="modal-overlay" id="loadPresetModal">
+    <div class="modal">
+        <div class="modal-title" id="loadModalTitle">📂 Load Preset</div>
+        <div class="preset-grid" id="loadPresetGrid" style="grid-template-columns:1fr 1fr;"></div>
+        <div class="modal-actions">
+            <button class="action-btn" onclick="closeModal('loadPresetModal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ─── SETTINGS STATE ─── */
+const settings = { speed: 'normal', stepMode: false };
+const speedMap = { slow: 900, normal: 400, fast: 120, instant: 0 };
+
+let history = [];
+let presets = [
+    { id:1, name:'Classic Example', blocks:'100,500,200,300,600', processes:'212,417,112,426', pages:'7,0,1,2,0,3,0,4', frames:'3' },
+    { id:2, name:'Stress Test', blocks:'50,150,300,200,400', processes:'175,225,80,350', pages:'1,2,3,4,1,2,5,1,2,3,4,5', frames:'4' },
+];
+let presetNextId = 3;
+let currentPresetType = 'alloc';
+
+/* ─── STEP MODE STATE ─── */
+let stepQueue = null;
+let stepResolve = null;
+
+/* ─── PANELS ─── */
+function showPanel(name, el) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    if (el) el.classList.add('active');
+    if (name === 'settings') renderPresetGrid();
+    if (name === 'history') renderHistory();
+}
+
+/* ─── UTILS ─── */
+function valid(arr) { return arr.some(isNaN); }
+
+function parseResult(data) {
+    return data.result.map(text => {
+        if (text.includes("not allocated")) return -1;
+        const m = text.match(/Block (\d+)/);
+        return m ? parseInt(m[1]) - 1 : -1;
+    });
+}
+
+function now() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+/* ─── DISPLAY ─── */
+function display(processes, allocation) {
+    let tbody = document.getElementById("outputBody");
+    tbody.innerHTML = "";
+    for (let i = 0; i < processes.length; i++) {
+        let ok = allocation[i] !== -1;
+        tbody.innerHTML += `<tr>
+            <td>P${i+1}</td><td>${processes[i]}</td>
+            <td>${ok ? 'Block '+(allocation[i]+1) : '—'}</td>
+            <td><span class="badge-alloc ${ok?'badge-ok':'badge-fail'}">${ok?'✓ Allocated':'✗ Not Allocated'}</span></td>
+        </tr>`;
+    }
+}
+
+/* ─── HISTORY ─── */
+function addHistory(algo, detail, result, colorClass) {
+    history.unshift({ algo, detail, result, colorClass, time: now() });
+    renderHistory();
+}
+
+function renderHistory() {
+    const list = document.getElementById('historyList');
+    if (!history.length) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">🕘</div><div class="empty-text">No runs yet — run a simulation to see history</div></div>';
+        return;
+    }
+    list.innerHTML = history.map(h => `
+        <div class="history-item">
+            <span class="history-algo ${h.colorClass}">${h.algo}</span>
+            <span class="history-detail">${h.detail}</span>
+            <span class="history-result">${h.result}</span>
+            <span class="history-time">${h.time}</span>
+        </div>`).join('');
+}
+
+function clearHistory() {
+    history = [];
+    renderHistory();
+}
+
+/* ─── ALLOCATION ALGORITHMS ─── */
+async function runAlloc(endpoint, colorClass, algoName) {
+    let blocks = document.getElementById("blocks").value.split(",").map(Number);
+    let processes = document.getElementById("processes").value.split(",").map(Number);
+    if (valid(blocks) || valid(processes)) return alert("Invalid input!");
+    let res = await fetch("http://localhost:8080/" + endpoint, {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ blocks, processes })
+    });
+    let data = await res.json();
+    let allocation = parseResult(data);
+    display(processes, allocation);
+    let allocated = allocation.filter(a => a !== -1).length;
+    addHistory(algoName, `blocks:[${blocks}] procs:[${processes}]`, `${allocated}/${processes.length} allocated`, colorClass);
+}
+
+function firstFit()  { runAlloc('firstfit', 'h-blue', 'FIRST FIT'); }
+function bestFit()   { runAlloc('bestfit', 'h-green', 'BEST FIT'); }
+function worstFit()  { runAlloc('worstfit', 'h-purple', 'WORST FIT'); }
+
+/* ─── COMPARE ALL ─── */
+async function compareAll() {
+    let blocks = document.getElementById("blocks").value.split(",").map(Number);
+    let processes = document.getElementById("processes").value.split(",").map(Number);
+    if (valid(blocks) || valid(processes)) return alert("Invalid input!");
+
+    const endpoints = [
+        { ep: 'firstfit', name: 'First Fit', cls: 'h-blue' },
+        { ep: 'bestfit', name: 'Best Fit', cls: 'h-green' },
+        { ep: 'worstfit', name: 'Worst Fit', cls: 'h-purple' },
+    ];
+
+    const results = await Promise.all(endpoints.map(async e => {
+        let res = await fetch("http://localhost:8080/" + e.ep, {
+            method: "POST", headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ blocks, processes })
+        });
+        let data = await res.json();
+        return { ...e, allocation: parseResult(data) };
+    }));
+
+    const counts = results.map(r => r.allocation.filter(a => a !== -1).length);
+    const maxAlloc = Math.max(...counts);
+
+    let html = '<div class="compare-table-wrap"><table class="compare-table"><thead><tr><th>Process</th><th>Size (KB)</th>';
+    results.forEach(r => html += `<th><span class="history-algo ${r.cls}" style="margin:0;">${r.name}</span></th>`);
+    html += '</tr></thead><tbody>';
+
+    for (let i = 0; i < processes.length; i++) {
+        html += `<tr><td>P${i+1}</td><td>${processes[i]}</td>`;
+        results.forEach(r => {
+            let ok = r.allocation[i] !== -1;
+            html += `<td ${ok?'class="compare-best"':''}><span class="badge-alloc ${ok?'badge-ok':'badge-fail'}">${ok?'Block '+(r.allocation[i]+1):'Not Allocated'}</span></td>`;
+        });
+        html += '</tr>';
+    }
+
+    html += '</tbody><tfoot><tr><td colspan="2" style="font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.8px;">Total Allocated</td>';
+    counts.forEach((c, i) => {
+        let best = c === maxAlloc;
+        html += `<td style="${best?'color:var(--accent-green);font-weight:700;':''}">${c}/${processes.length} ${best?'★':''}</td>`;
+    });
+    html += '</tr></tfoot></table></div>';
+
+    document.getElementById('compareWrap').innerHTML = html;
+    results.forEach(r => addHistory(r.name.toUpperCase(), `[compare] blocks:[${blocks}]`, `${r.allocation.filter(a=>a!==-1).length}/${processes.length} allocated`, r.cls));
+}
+
+/* ─── PAGE REPLACEMENT (shared stepper) ─── */
+async function waitStep() {
+    if (!settings.stepMode) return new Promise(r => setTimeout(r, speedMap[settings.speed]));
+    return new Promise(resolve => { stepResolve = resolve; });
+}
+
+function doStep() {
+    if (stepResolve) { const r = stepResolve; stepResolve = null; r(); }
+}
+
+async function runPageAlgo(isLRU) {
+    let pages = document.getElementById("pages").value.split(",").map(Number);
+    let frames = parseInt(document.getElementById("frames").value);
+    if (valid(pages) || isNaN(frames)) return alert("Invalid input!");
+
+    const container = document.getElementById("framesContainer");
+    container.innerHTML = "";
+    document.getElementById("statsRow").style.display = "none";
+
+    const stepBar = document.getElementById("stepBar");
+    const stepInfo = document.getElementById("stepInfo");
+    const stepBtn = document.getElementById("stepBtn");
+
+    if (settings.stepMode) {
+        stepBar.style.display = "flex";
+        stepBtn.disabled = false;
+    } else {
+        stepBar.style.display = "none";
+    }
+
+    let memory = [], recent = [], faults = 0, hits = 0;
+
+    for (let i = 0; i < pages.length; i++) {
+        if (settings.stepMode) {
+            stepInfo.textContent = `Step ${i+1} / ${pages.length}  — page: ${pages[i]}`;
+            stepBtn.disabled = false;
+        }
+
+        await waitStep();
+
+        let page = pages[i];
+        let box = document.createElement("div");
+        box.classList.add("frame-box");
+
+        if (!isLRU) {
+            if (!memory.includes(page)) {
+                if (memory.length < frames) memory.push(page);
+                else { memory.shift(); memory.push(page); }
+                faults++; box.classList.add("fault");
+            } else { hits++; box.classList.add("hit"); }
+        } else {
+            let idx = memory.indexOf(page);
+            if (idx === -1) {
+                if (memory.length < frames) { memory.push(page); recent.push(i); }
+                else {
+                    let li = recent.indexOf(Math.min(...recent));
+                    memory[li] = page; recent[li] = i;
+                }
+                faults++; box.classList.add("fault");
+            } else { recent[idx] = i; hits++; box.classList.add("hit"); }
+        }
+
+        box.innerText = page;
+        container.appendChild(box);
+    }
+
+    stepBar.style.display = "none";
+    showStats(faults, hits, pages.length);
+    const algoName = isLRU ? 'LRU' : 'FIFO';
+    addHistory(algoName, `pages:[${pages}] frames:${frames}`, `${faults} faults / ${hits} hits`, isLRU ? 'h-pink' : 'h-orange');
+}
+
+function fifo() { runPageAlgo(false); }
+function lru()  { runPageAlgo(true); }
+
+function showStats(faults, hits, total) {
+    document.getElementById("faultCount").textContent = faults;
+    document.getElementById("hitCount").textContent = hits;
+    document.getElementById("hitRate").textContent = total > 0 ? Math.round((hits/total)*100) + "%" : "0%";
+    document.getElementById("statsRow").style.display = "flex";
+}
+
+/* ─── EXPORT CSV ─── */
+function exportAllocCSV() {
+    const rows = [['Process','Size (KB)','Assigned Block','Status']];
+    document.querySelectorAll('#outputBody tr').forEach(tr => {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length === 4) rows.push([cells[0].textContent, cells[1].textContent, cells[2].textContent, cells[3].textContent.trim()]);
+    });
+    downloadCSV(rows, 'allocation_result.csv');
+}
+
+function exportCSV() {
+    const rows = [['Algorithm','Detail','Result','Time']];
+    history.forEach(h => rows.push([h.algo, h.detail, h.result, h.time]));
+    downloadCSV(rows, 'simulation_history.csv');
+}
+
+function downloadCSV(rows, filename) {
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = filename; a.click();
+}
+
+/* ─── PRESETS ─── */
+function renderPresetGrid() {
+    const grid = document.getElementById('presetGrid');
+    grid.innerHTML = presets.map(p => `
+        <div class="preset-item" onclick="loadPresetById(${p.id})">
+            <div class="preset-name">${p.name}</div>
+            <div class="preset-detail">blk: ${p.blocks}</div>
+            <div class="preset-detail">proc: ${p.processes}</div>
+            <span class="preset-del" onclick="event.stopPropagation();deletePreset(${p.id})">✕</span>
+        </div>`).join('') +
+        `<div class="preset-item preset-add" onclick="openSavePresetModal()"><span>+</span> Save Current</div>`;
+}
+
+function openSavePresetModal() {
+    document.getElementById('presetNameInput').value = '';
+    const b = document.getElementById('blocks').value || '—';
+    const p = document.getElementById('processes').value || '—';
+    const pg = document.getElementById('pages').value || '—';
+    const f = document.getElementById('frames').value || '—';
+    document.getElementById('presetPreview').textContent = `blocks: ${b}\nprocesses: ${p}\npages: ${pg}\nframes: ${f}`;
+    document.getElementById('savePresetModal').classList.add('open');
+}
+
+function savePreset() {
+    const name = document.getElementById('presetNameInput').value.trim() || 'Preset ' + presetNextId;
+    presets.push({
+        id: presetNextId++, name,
+        blocks: document.getElementById('blocks').value,
+        processes: document.getElementById('processes').value,
+        pages: document.getElementById('pages').value,
+        frames: document.getElementById('frames').value,
+    });
+    closeModal('savePresetModal');
+    renderPresetGrid();
+}
+
+function deletePreset(id) {
+    presets = presets.filter(p => p.id !== id);
+    renderPresetGrid();
+}
+
+function loadPresetById(id) {
+    const p = presets.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('blocks').value = p.blocks;
+    document.getElementById('processes').value = p.processes;
+    document.getElementById('pages').value = p.pages;
+    document.getElementById('frames').value = p.frames;
+    closeModal('loadPresetModal');
+    showPanel('simulator', document.querySelector('.menu-item'));
+    document.querySelectorAll('.menu-item')[0].classList.add('active');
+    document.querySelectorAll('.menu-item').forEach((m,i) => { if(i>0) m.classList.remove('active'); });
+}
+
+function openPresetModal(type) {
+    currentPresetType = type;
+    document.getElementById('loadModalTitle').textContent = '📂 Load Preset';
+    const grid = document.getElementById('loadPresetGrid');
+    grid.innerHTML = presets.map(p => `
+        <div class="preset-item" onclick="loadPresetById(${p.id})">
+            <div class="preset-name">${p.name}</div>
+            <div class="preset-detail">${type === 'alloc' ? 'blk: '+p.blocks : 'pages: '+p.pages}</div>
+        </div>`).join('');
+    document.getElementById('loadPresetModal').classList.add('open');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+/* ─── SETTINGS CONTROLS ─── */
+function setSpeed(val, el) {
+    settings.speed = val;
+    document.querySelectorAll('#speedSeg .seg-opt').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function setFont(size, el) {
+    document.body.classList.remove('font-sm','font-lg');
+    if (size === 'sm') document.body.classList.add('font-sm');
+    if (size === 'lg') document.body.classList.add('font-lg');
+    document.querySelectorAll('#fontSeg .seg-opt').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function toggleColorBlind(on) {
+    document.body.classList.toggle('colorblind', on);
+    const hDot = document.getElementById('legendHit');
+    const fDot = document.getElementById('legendFault');
+    if (on) {
+        hDot.style.background = 'rgba(59,130,246,0.5)'; hDot.style.borderColor = 'rgba(59,130,246,0.4)';
+        fDot.style.background = 'rgba(249,115,22,0.5)'; fDot.style.borderColor = 'rgba(249,115,22,0.4)';
+    } else {
+        hDot.style.background = 'rgba(52,211,153,0.5)'; hDot.style.borderColor = 'rgba(52,211,153,0.4)';
+        fDot.style.background = 'rgba(248,113,113,0.5)'; fDot.style.borderColor = 'rgba(248,113,113,0.4)';
+    }
+}
+
+/* ─── UI ─── */
+function toggleSidebar() { document.getElementById("sidebar").classList.toggle("closed"); }
+
+function toggleTheme() {
+    document.body.classList.toggle("light");
+    document.getElementById("themeBtn").innerHTML = document.body.classList.contains("light") ? "🌙 Dark" : "☀️ Light";
+}
+</script>
+</body>
+</html>
