@@ -622,7 +622,7 @@ async function runAlloc(endpoint, colorClass, algoName) {
     let blocks = document.getElementById("blocks").value.split(",").map(Number);
     let processes = document.getElementById("processes").value.split(",").map(Number);
     if (valid(blocks) || valid(processes)) return alert("Invalid input!");
-    let res = await fetch("http://localhost:8080/" + endpoint, {
+    let res = await fetch("https://memsim.onrender.com/" + e.ep, {
         method: "POST", headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ blocks, processes })
     });
