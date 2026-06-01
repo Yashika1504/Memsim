@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Memory Management Simulator</title>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-G4G7MJ96CE"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-G4G7MJ96CE');
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -642,7 +650,7 @@ body.colorblind .frame-box.fault { background: rgba(249,115,22,0.12); border-col
     </div>
 </div>
 
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-G4G7MJ96CE">
+<script>
 /* ─── SETTINGS STATE ─── */
 const settings = { speed: 'normal', stepMode: false };
 const speedMap = { slow: 900, normal: 400, fast: 120, instant: 0 };
@@ -1003,12 +1011,7 @@ function toggleTheme() {
     document.body.classList.toggle("light");
     document.getElementById("themeBtn").innerHTML = document.body.classList.contains("light") ? "🌙 Dark" : "☀️ Light";
 }
-<!-- Google tag (gtag.js) -->
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
 
-gtag('config', 'G-G4G7MJ96CE');
 </script>
 </body>
 </html>
