@@ -4,14 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Memory Management Simulator</title>
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-G4G7MJ96CE"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-G4G7MJ96CE');
-</script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -618,7 +610,7 @@ body.colorblind .frame-box.fault { background: rgba(249,115,22,0.12); border-col
         <div style="margin-top:20px;display:flex;flex-wrap:wrap;gap:10px;">
             <div class="stat-chip"><span class="stat-label">Version</span><span class="stat-val" style="margin-left:6px;">2.0</span></div>
             <div class="stat-chip"><span class="stat-label">Algorithms</span><span class="stat-val" style="margin-left:6px;">5</span></div>
-            <div class="stat-chip"><span class="stat-label">Backend</span><span class="stat-val" style="margin-left:6px;">https://memsim.onrender.com/</span></div>
+            <div class="stat-chip"><span class="stat-label">Backend</span><span class="stat-val" style="margin-left:6px;">localhost:8080</span></div>
         </div>
     </div>
 </div>
@@ -1011,7 +1003,6 @@ function toggleTheme() {
     document.body.classList.toggle("light");
     document.getElementById("themeBtn").innerHTML = document.body.classList.contains("light") ? "🌙 Dark" : "☀️ Light";
 }
-
 </script>
 </body>
 </html>
